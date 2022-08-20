@@ -16,14 +16,34 @@ public class Board implements ActionListener {
     private final int BOARD_WIDTH = 800;
     private final int TITLE_HEIGHT = 200;
     private final int TITLE_WIDTH = 800;
-    private String playerMove;
-    private char[][] gameState;
+    private String playerMove = "";
+    private char[][] gameState = {
+            {' ', ' ', ' '},
+            {' ', ' ', ' '},
+            {' ', ' ', ' '}
+    };
 
     public void createBoard() {
         //gameIntro();
         boardFrame();
         boardTitle();
         buttonsGrid();
+
+        Thread updateGameState = new Thread(() -> {
+            while (true) {
+                buttons.get(0).setText(Character.toString(gameState[0][0]));
+                buttons.get(1).setText(Character.toString(gameState[0][1]));
+                buttons.get(2).setText(Character.toString(gameState[0][2]));
+                buttons.get(3).setText(Character.toString(gameState[1][0]));
+                buttons.get(4).setText(Character.toString(gameState[1][1]));
+                buttons.get(5).setText(Character.toString(gameState[1][2]));
+                buttons.get(6).setText(Character.toString(gameState[2][0]));
+                buttons.get(7).setText(Character.toString(gameState[2][1]));
+                buttons.get(8).setText(Character.toString(gameState[2][2]));
+            }
+        });
+
+        updateGameState.start();
     }
 
     private void boardFrame() {
@@ -58,7 +78,6 @@ public class Board implements ActionListener {
         textField.setText("TIC TAC TOE CHALLENGE");
         textField.setOpaque(true);
 
-        //o text field anterior vai estar displayed neste titlePanel
         boardTitle.setLayout(new BorderLayout());
         boardTitle.setBounds(0, 0, TITLE_WIDTH, TITLE_HEIGHT);
 
@@ -90,6 +109,10 @@ public class Board implements ActionListener {
 
     public String getPlayerMove() {
         return playerMove;
+    }
+
+    public void setPlayerMove(String playerMove) {
+        this.playerMove = playerMove;
     }
 
     public void setGameState(char[][] gameState) {
