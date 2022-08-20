@@ -4,13 +4,14 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.util.ArrayList;
 
 public class Board implements ActionListener {
     JFrame frame = new JFrame();
-    JPanel boardTitle = new JPanel(); //contém o título
-    JPanel boardButtons = new JPanel(); // contém os butões
-    JLabel textField = new JLabel(); //para display uma mensagem qualquer
-    JButton[] buttons = new JButton[9];
+    JPanel boardTitle = new JPanel();
+    JPanel boardButtons = new JPanel();
+    JLabel textField = new JLabel();
+    ArrayList<JButton> buttons = new ArrayList<>(9);
     private final int BOARD_HEIGHT = 800;
     private final int BOARD_WIDTH = 800;
     private final int TITLE_HEIGHT = 200;
@@ -18,8 +19,7 @@ public class Board implements ActionListener {
     private String playerMove;
     private char[][] gameState;
 
-    private void createBoard() {
-
+    public void createBoard() {
         //gameIntro();
         boardFrame();
         boardTitle();
@@ -27,7 +27,6 @@ public class Board implements ActionListener {
     }
 
     private void boardFrame() {
-
         frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
         frame.setSize(BOARD_WIDTH, BOARD_HEIGHT);
         frame.getContentPane().setBackground(new Color(219, 219, 219));
@@ -49,9 +48,7 @@ public class Board implements ActionListener {
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
-    }
-
-     */
+    }*/
 
     private void boardTitle() {
         textField.setBackground(Color.BLACK);
@@ -75,31 +72,24 @@ public class Board implements ActionListener {
         frame.add(boardButtons);
 
         for (int i = 0; i < 9; i++) {
-            buttons[i] = new JButton();
-            boardButtons.add(buttons[i]);
-            buttons[i].setOpaque(true);
-            buttons[i].setFont(new Font("Monospaced", Font.BOLD, 50));
-            buttons[i].setFocusable(false);
-            buttons[i].addActionListener(this);
+            buttons.add(new JButton());
+            boardButtons.add(buttons.get(i));
+            buttons.get(i).setOpaque(true);
+            buttons.get(i).setFont(new Font("Monospaced", Font.BOLD, 50));
+            buttons.get(i).setFocusable(false);
+            buttons.get(i).addActionListener(this);
         }
     }
 
-
     @Override
     public void actionPerformed(ActionEvent e) {
-        for (int i = 0; i < 9; i++) {
-            if (e.getSource() == buttons[i]) {
+        Object clickedButton = e.getSource();
 
-            }
-        }
+        playerMove = Integer.toString(buttons.indexOf(clickedButton) + 1);
     }
 
     public String getPlayerMove() {
         return playerMove;
-    }
-
-    public void setPlayerMove(String playerMove) {
-        this.playerMove = playerMove;
     }
 
     public void setGameState(char[][] gameState) {
