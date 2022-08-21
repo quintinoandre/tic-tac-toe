@@ -23,6 +23,12 @@ public class Board implements ActionListener {
             {' ', ' ', ' '}
     };
 
+    /*public Text xScoreText, oScoreText;
+    public int xScore = 0;
+    public int oScore = 0;
+
+     */
+
     public void createBoard() {
         //gameIntro();
         boardFrame();
@@ -99,6 +105,11 @@ public class Board implements ActionListener {
             buttons.get(i).addActionListener(this);
         }
     }
+
+    /*public void scoreArea() {
+    }
+
+     */
 
     @Override
     public void actionPerformed(ActionEvent e) {

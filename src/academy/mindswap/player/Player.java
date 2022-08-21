@@ -17,6 +17,7 @@ public class Player {
     private static Board playerBoard;
     private boolean isPlayerTurn;
     private final String GAME_STATE = "gamestate";
+    private final String YOUR_TURN = "yourturn";
 
     /**
      * constructor method of the class Player
@@ -77,6 +78,10 @@ public class Player {
         while ((line = bufferedReader.readLine()) != null) {
             if (line.startsWith(GAME_STATE)) {
                 playerBoard.setGameState(extractGameState(line));
+            }
+
+            if (line.equals(YOUR_TURN)){
+                isPlayerTurn = true;
             }
 
             System.out.println(line);
