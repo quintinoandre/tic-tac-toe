@@ -5,6 +5,8 @@ import academy.mindswap.board.Board;
 import java.io.*;
 import java.net.Socket;
 
+import static academy.mindswap.ConstantMessages.GAME_STATE;
+import static academy.mindswap.ConstantMessages.YOUR_TURN;
 import static academy.mindswap.EnvironmentVariables.HOST;
 import static academy.mindswap.EnvironmentVariables.PORT;
 import static academy.mindswap.player.PlayerMessages.*;
@@ -14,10 +16,8 @@ import static academy.mindswap.utils.logger.LoggerType.WARNING;
 
 public class Player {
     private Socket playerSocket;
-    private static Board playerBoard;
+    private Board playerBoard;
     private boolean isPlayerTurn;
-    private final String GAME_STATE = "gamestate";
-    private final String YOUR_TURN = "yourturn";
 
     /**
      * constructor method of the class Player
@@ -35,10 +35,6 @@ public class Player {
      */
     public static void main(String[] args) {
         Player player = new Player();
-
-        playerBoard = new Board();
-
-        playerBoard.createBoard();
 
         try {
             player.startPlay(HOST, PORT);
@@ -78,10 +74,14 @@ public class Player {
         while ((line = bufferedReader.readLine()) != null) {
             if (line.startsWith(GAME_STATE)) {
                 playerBoard.setGameState(extractGameState(line));
+
+                continue;
             }
 
-            if (line.equals(YOUR_TURN)){
+            if (line.equals(YOUR_TURN)) {
                 isPlayerTurn = true;
+
+                continue;
             }
 
             System.out.println(line);
@@ -134,10 +134,34 @@ public class Player {
         @Override
         public void run() {
             try {
+                BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(System.in));
                 BufferedWriter bufferedWriter = new BufferedWriter(new OutputStreamWriter(playerSocket.getOutputStream()));
+
+                String playerMessage = bufferedReader.readLine();
+
+                while (!playerMessage.matches("[a-zA-Z]+")) {
+                    log(ERROR, INCORRECT_NICKNAME, true);
+
+                    playerMessage = bufferedReader.readLine();
+                }
+
+                bufferedWriter.write(playerMessage);
+
+                bufferedWriter.newLine();
+
+                bufferedWriter.flush();
+
+                // TODO: don't allow to open the board without two players on the game
+                playerBoard = new Board();
+
+                playerBoard.createBoard();
+
+                bufferedReader.close();
 
                 while (!playerSocket.isClosed()) {
                     if (isPlayerTurn) {
+                        playerBoard.enableButtons();
+
                         String playerMove = playerBoard.getPlayerMove();
 
                         if (!playerMove.equals("")) {
@@ -148,6 +172,8 @@ public class Player {
                             bufferedWriter.flush();
 
                             playerBoard.setPlayerMove("");
+
+                            playerBoard.disableButtons();
                         }
 
                         isPlayerTurn = false;
