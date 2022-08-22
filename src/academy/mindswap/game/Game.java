@@ -6,6 +6,7 @@ import java.io.*;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.Random;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -22,6 +23,8 @@ public class Game {
     private volatile boolean isGameFinished;
     private boolean isGameStarted;
     private boolean isFirstTurn;
+    PlayerHandler playerTurn;
+
 
     char[][] gameState = {
             {' ', ' ', ' '},
@@ -41,21 +44,73 @@ public class Game {
     }
 
     public void nextTurn() {
-        if (isFirstTurn) {
-            chooseStartingPlayer();
+        String playerMove;
 
+        StringBuilder gameStateToSend = new StringBuilder();
+
+        if (isFirstTurn) {
+            playerTurn = chooseStartingPlayer();
             isFirstTurn = false;
+        } else {
+            playerTurn = switchPlayer(playerTurn);
+            playerTurn.sendMessage(YOUR_TURN);
+        }
+
+        playerMove = playerTurn.getPlayerMessage();
+
+        sendGameState(playerMove, gameStateToSend);
+    }
+
+    private void sendGameState(String playerMove, StringBuilder gameStateToSend) {
+        updateGameState(playerTurn, playerMove);
+        gameStateToSend.append(GAME_STATE);
+        for (char[] row : gameState) {
+            for (char c : row) {
+                gameStateToSend.append(c);
+            }
+
+        }
+        broadcast(gameStateToSend.toString());
+    }
+
+    private PlayerHandler switchPlayer(PlayerHandler previousPlayer) {
+
+        Optional<PlayerHandler> nextPlayer = playerConnections.stream()
+                .filter(ph -> ph != previousPlayer)
+                .findFirst();
+
+        return nextPlayer.get();
+
+    }
+
+    private void updateGameState(PlayerHandler playerTurn, String playerMove) {
+        switch (playerMove) {
+            case "1" -> gameState[0][0] = playerTurn.symbol;
+            case "2" -> gameState[0][1] = playerTurn.symbol;
+            case "3" -> gameState[0][2] = playerTurn.symbol;
+            case "4" -> gameState[1][0] = playerTurn.symbol;
+            case "5" -> gameState[1][1] = playerTurn.symbol;
+            case "6" -> gameState[1][2] = playerTurn.symbol;
+            case "7" -> gameState[2][0] = playerTurn.symbol;
+            case "8" -> gameState[2][1] = playerTurn.symbol;
+            case "9" -> gameState[2][2] = playerTurn.symbol;
         }
     }
 
     public PlayerHandler chooseStartingPlayer() {
-        PlayerHandler chosenOne = playerConnections.get(new Random().nextInt(2));
+        PlayerHandler firstPlayer = playerConnections.get(new Random().nextInt(2));
 
-        chosenOne.symbol = X;
+        firstPlayer.symbol = X;
 
-        chosenOne.sendMessage(YOUR_TURN);
+        Optional<PlayerHandler> secondPlayer = playerConnections.stream()
+                .filter(ph -> ph != firstPlayer)
+                .findFirst();
 
-        return chosenOne;
+        secondPlayer.get().symbol = O;
+
+        firstPlayer.sendMessage(YOUR_TURN);
+
+        return firstPlayer;
     }
 
     public synchronized void broadcast(String message) {
@@ -160,6 +215,7 @@ public class Game {
             log(SUCCESS, String.format(WELCOME_MESSAGE, " (" + nickname + ")"), false);
 
             while (!isGameFinished) {
+
                 if (Thread.interrupted()) {
                     return;
                 }
