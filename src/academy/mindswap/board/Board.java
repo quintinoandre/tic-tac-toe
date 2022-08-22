@@ -47,10 +47,21 @@ public class Board implements ActionListener {
                 buttons.get(6).setText(Character.toString(gameState[2][0]));
                 buttons.get(7).setText(Character.toString(gameState[2][1]));
                 buttons.get(8).setText(Character.toString(gameState[2][2]));
+
+                disableClickedButton();
             }
         });
 
         updateGameState.start();
+    }
+
+    private void disableClickedButton() {
+        for (JButton button : buttons) {
+            if (!button.getText().equals(" ")) {
+                button.setEnabled(false);
+            }
+
+        }
     }
 
     private void boardFrame() {
@@ -121,7 +132,9 @@ public class Board implements ActionListener {
 
     public void enableButtons() {
         for (JButton button : buttons) {
-            button.setEnabled(true);
+            if (button.getText().equals(" ")) {
+                button.setEnabled(true);
+            }
         }
     }
 
@@ -130,6 +143,7 @@ public class Board implements ActionListener {
             button.setEnabled(false);
         }
     }
+
 
     public String getPlayerMove() {
         return playerMove;
