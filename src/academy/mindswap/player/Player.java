@@ -100,13 +100,23 @@ public class Player {
                 {' ', ' ', ' '},
                 {' ', ' ', ' '}};
 
-        for (int i = 0; i < gameState.length; i++) {
-            for (int j = 0; j < gameState[i].length; j++) {
-                gameState[i][j] = gamePositions[j].toCharArray()[0];
-            }
-        }
-
+        updateGameState(gamePositions, gameState);
+        
         return gameState;
+    }
+
+    private void updateGameState(String[] gamePositions, char[][] gameState) {
+
+        gameState[0][0] = gamePositions[0].toCharArray()[0];
+        gameState[0][1] = gamePositions[1].toCharArray()[0];
+        gameState[0][2] = gamePositions[2].toCharArray()[0];
+        gameState[1][0] = gamePositions[3].toCharArray()[0];
+        gameState[1][1] = gamePositions[4].toCharArray()[0];
+        gameState[1][2] = gamePositions[5].toCharArray()[0];
+        gameState[2][0] = gamePositions[6].toCharArray()[0];
+        gameState[2][1] = gamePositions[7].toCharArray()[0];
+        gameState[2][2] = gamePositions[8].toCharArray()[0];
+
     }
 
     /**
@@ -174,9 +184,10 @@ public class Player {
                             playerBoard.setPlayerMove("");
 
                             playerBoard.disableButtons();
-                        }
 
-                        isPlayerTurn = false;
+                            isPlayerTurn = false;
+
+                        }
                     }
                 }
 
