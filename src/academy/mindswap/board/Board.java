@@ -34,6 +34,7 @@ public class Board implements ActionListener {
         boardFrame();
         boardTitle();
         buttonsGrid();
+        disableButtons();
 
         Thread updateGameState = new Thread(() -> {
             while (true) {
@@ -116,6 +117,18 @@ public class Board implements ActionListener {
         Object clickedButton = e.getSource();
 
         playerMove = Integer.toString(buttons.indexOf(clickedButton) + 1);
+    }
+
+    public void enableButtons() {
+        for (JButton button : buttons) {
+            button.setEnabled(true);
+        }
+    }
+
+    public void disableButtons() {
+        for (JButton button : buttons) {
+            button.setEnabled(false);
+        }
     }
 
     public String getPlayerMove() {
