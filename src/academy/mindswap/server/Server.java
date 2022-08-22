@@ -9,6 +9,7 @@ import java.net.ServerSocket;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import static academy.mindswap.ConstantMessages.MAX_PLAYERS;
 import static academy.mindswap.EnvironmentVariables.PORT;
 
 
@@ -25,6 +26,7 @@ public class Server {
     private boolean done; //this allows the server to keep on receiving clients until is true
 
     private ExecutorService gamesThreads; // we need to create a threadpool for different games that are going to connect
+    private int playersConnected;
 
     public Server() {
         //gamesList = new CopyOnWriteArrayList<>();
@@ -46,7 +48,30 @@ public class Server {
                 if (getOpenGame().isPresent()) {
                   getOpenGame.acceptPlayer(Socket gameSocket = server.accept());
                 }*/
-                game.acceptPlayer(server.accept());
+
+                if (!game.canGameStart()) {
+                    if (playersConnected < MAX_PLAYERS) {
+                        game.acceptPlayer(server.accept());
+
+                        playersConnected++;
+                    }
+
+                    continue;
+                }
+
+                if (!game.isGameFinished()) {
+                    if (!game.isGameStarted()) {
+                        game.start();
+                    }
+
+                    if (game.isGameStarted() && !game.isGameFinished()) {
+                        game.nextTurn();
+                    }
+
+                    continue;
+                }
+
+                game.finishGame();
             }
         } catch (IOException e) { //catch the exception here instead of throwing it to the main
             shutdown();
