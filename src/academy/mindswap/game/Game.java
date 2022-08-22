@@ -4,10 +4,7 @@ import academy.mindswap.server.Server;
 
 import java.io.*;
 import java.net.Socket;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-import java.util.Random;
+import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -24,7 +21,7 @@ public class Game {
     private boolean isGameStarted;
     private boolean isFirstTurn;
     PlayerHandler playerTurn;
-
+    List<List> winningConditions = new ArrayList<>();
 
     char[][] gameState = {
             {' ', ' ', ' '},
@@ -41,6 +38,7 @@ public class Game {
         isGameStarted = true;
         broadcast(GAME_START_MESSAGE);
         isFirstTurn = true;
+        createWinningConditions();
     }
 
     public void nextTurn() {
@@ -57,8 +55,10 @@ public class Game {
         }
 
         playerMove = playerTurn.getPlayerMessage();
+        playerTurn.playerMoves.add(playerMove);
 
         sendGameState(playerMove, gameStateToSend);
+        System.out.println(checkWinner(playerTurn));
     }
 
     private void sendGameState(String playerMove, StringBuilder gameStateToSend) {
@@ -97,7 +97,7 @@ public class Game {
         }
     }
 
-    public PlayerHandler chooseStartingPlayer() {
+    private PlayerHandler chooseStartingPlayer() {
         PlayerHandler firstPlayer = playerConnections.get(new Random().nextInt(2));
 
         firstPlayer.symbol = X;
@@ -113,13 +113,51 @@ public class Game {
         return firstPlayer;
     }
 
-    public synchronized void broadcast(String message) {
+    private String checkWinner(PlayerHandler playerTurn) {
+        if (playerConnections.get(0).playerMoves.size() + playerConnections.get(1).playerMoves.size() == 9) {
+            log(WARNING, DRAW, false);
+            return DRAW;
+        }
+
+        for (List winningCondition : winningConditions) {
+            if (playerTurn.playerMoves.containsAll(winningCondition)) {
+                log(SUCCESS, String.format(WINNER, playerTurn.nickname), false);
+                return String.format(WINNER, playerTurn.nickname);
+            }
+        }
+        return "";
+    }
+
+
+    private void createWinningConditions() {
+        List<String> topRow = Arrays.asList("1", "2", "3");
+        List<String> midRow = Arrays.asList("4", "5", "6");
+        List<String> bottomRow = Arrays.asList("7", "8", "9");
+
+        List<String> leftColumn = Arrays.asList("1", "4", "7");
+        List<String> midColumn = Arrays.asList("2", "5", "8");
+        List<String> bottomColumn = Arrays.asList("3", "6", "9");
+
+        List<String> diagonal1 = Arrays.asList("1", "5", "9");
+        List<String> diagonal2 = Arrays.asList("7", "5", "3");
+
+        winningConditions.add(topRow);
+        winningConditions.add(midRow);
+        winningConditions.add(bottomRow);
+        winningConditions.add(leftColumn);
+        winningConditions.add(midColumn);
+        winningConditions.add(bottomColumn);
+        winningConditions.add(diagonal1);
+        winningConditions.add(diagonal2);
+    }
+
+    private synchronized void broadcast(String message) {
         playerConnections.stream()
                 .filter(ph -> !ph.hasDisconnected)
                 .forEach(ph -> ph.sendMessage(message));
     }
 
-    public synchronized void broadcast(String message, PlayerHandler notSending) {
+    private synchronized void broadcast(String message, PlayerHandler notSending) {
         playerConnections.stream()
                 .filter(ph -> !ph.hasDisconnected)
                 .filter(ph -> !ph.equals(notSending))
@@ -130,7 +168,7 @@ public class Game {
         playerThreads.submit(new PlayerHandler(playerSocket));
     }
 
-    public synchronized boolean playersHaveNickname() {
+    private synchronized boolean playersHaveNickname() {
         for (PlayerHandler playerConnection : playerConnections) {
             if (playerConnection.nickname.equals("")) {
                 return false;
@@ -140,7 +178,7 @@ public class Game {
         return true;
     }
 
-    public boolean isAcceptingPlayers() {
+    private boolean isAcceptingPlayers() {
         return playerConnections.size() < MAX_PLAYERS && !isGameStarted;
     }
 
@@ -175,15 +213,16 @@ public class Game {
     /**
      * @link inner class handling playerSockets
      */
-    public class PlayerHandler implements Runnable {
+    private class PlayerHandler implements Runnable {
         private Socket playerSocket;
         private BufferedReader bufferedReader;
         private BufferedWriter bufferedWriter;
         private String nickname = "";
         private boolean hasDisconnected;
         private char symbol;
+        private List<String> playerMoves = new ArrayList<>();
 
-        public PlayerHandler(Socket playerSocket) {
+        private PlayerHandler(Socket playerSocket) {
             this.playerSocket = playerSocket;
 
             try {
@@ -224,7 +263,7 @@ public class Game {
             shutdownPlayerSocket();
         }
 
-        public void sendMessage(String message) {
+        private void sendMessage(String message) {
             try {
                 bufferedWriter.write(message);
                 bufferedWriter.newLine();
@@ -234,7 +273,7 @@ public class Game {
             }
         }
 
-        public String getPlayerMessage() {
+        private String getPlayerMessage() {
             String playerMessage = null;
 
             try {
@@ -250,7 +289,7 @@ public class Game {
             return playerMessage;
         }
 
-        public void shutdownPlayerSocket() {
+        private void shutdownPlayerSocket() {
             hasDisconnected = true;
 
             if (!playerSocket.isClosed()) {

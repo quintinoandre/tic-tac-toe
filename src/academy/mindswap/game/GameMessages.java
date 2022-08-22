@@ -13,4 +13,6 @@ public final class GameMessages {
     public static final String ENTER_NICKNAME = "Please enter your nickname:";
     public static final String NEW_PLAYER = "Player %s joined the game!";
     public static final String GAME_OVER = "Game Over!";
+    public static final String WINNER = "%s won!";
+    public static final String DRAW = "DRAW";
 }
