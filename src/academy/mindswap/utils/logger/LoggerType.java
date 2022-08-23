@@ -2,8 +2,7 @@ package academy.mindswap.utils.logger;
 
 public enum LoggerType {
     ERROR("error"),
-    SUCCESS("success"),
-    WARNING("warning");
+    SUCCESS("success");
 
     private final String description;
 

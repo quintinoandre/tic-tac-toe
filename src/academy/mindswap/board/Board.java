@@ -6,6 +6,8 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.util.ArrayList;
 
+import static academy.mindswap.game.GameMessages.DRAW;
+
 public class Board implements ActionListener {
     JFrame frame = new JFrame();
     JPanel boardTitle = new JPanel();
@@ -23,11 +25,18 @@ public class Board implements ActionListener {
             {' ', ' ', ' '}
     };
 
+    /*public Text xScoreText, oScoreText;
+    public int xScore = 0;
+    public int oScore = 0;
+
+     */
+
     public void createBoard() {
         //gameIntro();
         boardFrame();
         boardTitle();
         buttonsGrid();
+        disableButtons();
 
         Thread updateGameState = new Thread(() -> {
             while (true) {
@@ -40,10 +49,21 @@ public class Board implements ActionListener {
                 buttons.get(6).setText(Character.toString(gameState[2][0]));
                 buttons.get(7).setText(Character.toString(gameState[2][1]));
                 buttons.get(8).setText(Character.toString(gameState[2][2]));
+
+                disableClickedButton();
             }
         });
 
         updateGameState.start();
+    }
+
+    private void disableClickedButton() {
+        for (JButton button : buttons) {
+            if (!button.getText().equals(" ")) {
+                button.setEnabled(false);
+            }
+
+        }
     }
 
     private void boardFrame() {
@@ -100,6 +120,11 @@ public class Board implements ActionListener {
         }
     }
 
+    /*public void scoreArea() {
+    }
+
+     */
+
     @Override
     public void actionPerformed(ActionEvent e) {
         Object clickedButton = e.getSource();
@@ -107,8 +132,27 @@ public class Board implements ActionListener {
         playerMove = Integer.toString(buttons.indexOf(clickedButton) + 1);
     }
 
+    public void enableButtons() {
+        for (JButton button : buttons) {
+            if (button.getText().equals(" ")) {
+                button.setEnabled(true);
+            }
+        }
+    }
+
+    public void disableButtons() {
+        for (JButton button : buttons) {
+            button.setEnabled(false);
+        }
+    }
+
+
     public String getPlayerMove() {
         return playerMove;
+    }
+
+    public void setPlayerTurn(String playerTurn) {
+        textField.setText(playerTurn);
     }
 
     public void setPlayerMove(String playerMove) {
@@ -117,6 +161,36 @@ public class Board implements ActionListener {
 
     public void setGameState(char[][] gameState) {
         this.gameState = gameState;
+    }
+
+    private void printWinnerPositions(int a, int b, int c) {
+        buttons.get(a).setBackground(Color.GREEN);
+
+        buttons.get(b).setBackground(Color.GREEN);
+        
+        buttons.get(c).setBackground(Color.GREEN);
+    }
+
+    public void setGameResult(String gameResult) {
+        disableButtons();
+
+        if (!gameResult.equals(DRAW)) {
+            String[] winnerPositions = gameResult.replaceAll("\\D", "").split("");
+
+            int[] winnerButtonsPosition = {Integer.parseInt(winnerPositions[0]) - 1,
+                    Integer.parseInt(winnerPositions[1]) - 1,
+                    Integer.parseInt(winnerPositions[2]) - 1};
+
+            printWinnerPositions(winnerButtonsPosition[0], winnerButtonsPosition[1], winnerButtonsPosition[2]);
+
+            textField.setText(gameResult.replaceAll("\\d", ""));
+
+            return;
+        }
+
+        buttons.forEach(button -> button.setBackground(Color.YELLOW));
+
+        textField.setText(gameResult);
     }
 }
 

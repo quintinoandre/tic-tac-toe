@@ -5,18 +5,17 @@ import academy.mindswap.board.Board;
 import java.io.*;
 import java.net.Socket;
 
+import static academy.mindswap.ConstantMessages.*;
 import static academy.mindswap.EnvironmentVariables.HOST;
 import static academy.mindswap.EnvironmentVariables.PORT;
 import static academy.mindswap.player.PlayerMessages.*;
 import static academy.mindswap.utils.logger.Logger.log;
 import static academy.mindswap.utils.logger.LoggerType.ERROR;
-import static academy.mindswap.utils.logger.LoggerType.WARNING;
 
 public class Player {
     private Socket playerSocket;
-    private static Board playerBoard;
+    private Board playerBoard;
     private boolean isPlayerTurn;
-    private final String GAME_STATE = "gamestate";
 
     /**
      * constructor method of the class Player
@@ -24,7 +23,9 @@ public class Player {
      */
     public Player() {
         playerSocket = null;
+
         playerBoard = null;
+
         isPlayerTurn = false;
     }
 
@@ -34,10 +35,6 @@ public class Player {
      */
     public static void main(String[] args) {
         Player player = new Player();
-
-        playerBoard = new Board();
-
-        playerBoard.createBoard();
 
         try {
             player.startPlay(HOST, PORT);
@@ -57,7 +54,7 @@ public class Player {
     private void startPlay(String host, int port) throws IOException {
         playerSocket = new Socket(host, port);
 
-        new Thread(new SendMove()).start();
+        new Thread(new SendInformation()).start();
 
         receiveGameMassage();
 
@@ -75,8 +72,37 @@ public class Player {
         String line;
 
         while ((line = bufferedReader.readLine()) != null) {
+            if (line.equals(CREATE_BOARD)) {
+                playerBoard = new Board();
+
+                playerBoard.createBoard();
+
+                continue;
+            }
+
             if (line.startsWith(GAME_STATE)) {
                 playerBoard.setGameState(extractGameState(line));
+
+                continue;
+            }
+
+            if (line.startsWith(YOUR_TURN)) {
+                isPlayerTurn = true;
+
+                continue;
+            }
+
+            if (line.startsWith(GAME_OVER)) {
+                playerBoard.setGameResult(line.replace(GAME_OVER, ""));
+
+                continue;
+            }
+
+
+            if (line.startsWith(PLAYER_TURN)) {
+                playerBoard.setPlayerTurn(line.replace(PLAYER_TURN, ""));
+
+                continue;
             }
 
             System.out.println(line);
@@ -95,25 +121,33 @@ public class Player {
                 {' ', ' ', ' '},
                 {' ', ' ', ' '}};
 
-        for (int i = 0; i < gameState.length; i++) {
-            for (int j = 0; j < gameState[i].length; j++) {
-                gameState[i][j] = gamePositions[j].toCharArray()[0];
-            }
-        }
+        updateGameState(gamePositions, gameState);
 
         return gameState;
+    }
+
+    private void updateGameState(String[] gamePositions, char[][] gameState) {
+        gameState[0][0] = gamePositions[0].toCharArray()[0];
+        gameState[0][1] = gamePositions[1].toCharArray()[0];
+        gameState[0][2] = gamePositions[2].toCharArray()[0];
+        gameState[1][0] = gamePositions[3].toCharArray()[0];
+        gameState[1][1] = gamePositions[4].toCharArray()[0];
+        gameState[1][2] = gamePositions[5].toCharArray()[0];
+        gameState[2][0] = gamePositions[6].toCharArray()[0];
+        gameState[2][1] = gamePositions[7].toCharArray()[0];
+        gameState[2][2] = gamePositions[8].toCharArray()[0];
     }
 
     /**
      * closes player's socket after server closes his
      */
     private void closeSocket() {
-        log(WARNING, SERVER_CLOSE_CONNECTION, true);
+        log(ERROR, SERVER_CLOSE_CONNECTION, true);
 
         try {
             playerSocket.close();
         } catch (IOException e) {
-            log(WARNING, PLAYER_SOCKET_CLOSED, true);
+            log(ERROR, PLAYER_SOCKET_CLOSED, true);
         }
 
         System.exit(0);
@@ -122,17 +156,37 @@ public class Player {
     /**
      * inner class SendMove that implements the interface Runnable
      */
-    private class SendMove implements Runnable {
+    private class SendInformation implements Runnable {
         /**
          * read the player move from the player board if it's his turn
          */
         @Override
         public void run() {
             try {
+                BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(System.in));
+
                 BufferedWriter bufferedWriter = new BufferedWriter(new OutputStreamWriter(playerSocket.getOutputStream()));
+
+                String playerMessage = bufferedReader.readLine();
+
+                while (!playerMessage.matches("[A-Za-zÀ-ü]+")) {
+                    log(ERROR, INCORRECT_NICKNAME, true);
+
+                    playerMessage = bufferedReader.readLine();
+                }
+
+                bufferedWriter.write(playerMessage);
+
+                bufferedWriter.newLine();
+
+                bufferedWriter.flush();
+
+                bufferedReader.close();
 
                 while (!playerSocket.isClosed()) {
                     if (isPlayerTurn) {
+                        playerBoard.enableButtons();
+
                         String playerMove = playerBoard.getPlayerMove();
 
                         if (!playerMove.equals("")) {
@@ -143,15 +197,17 @@ public class Player {
                             bufferedWriter.flush();
 
                             playerBoard.setPlayerMove("");
-                        }
 
-                        isPlayerTurn = false;
+                            playerBoard.disableButtons();
+
+                            isPlayerTurn = false;
+                        }
                     }
                 }
 
                 bufferedWriter.close();
             } catch (IOException e) {
-                e.printStackTrace();
+                log(ERROR, e.getMessage(), true);
             }
         }
     }
