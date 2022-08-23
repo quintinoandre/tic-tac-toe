@@ -5,13 +5,15 @@ import academy.mindswap.server.Server;
 import java.io.*;
 import java.net.Socket;
 import java.util.*;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import static academy.mindswap.ConstantMessages.*;
 import static academy.mindswap.game.GameMessages.*;
 import static academy.mindswap.utils.logger.Logger.log;
-import static academy.mindswap.utils.logger.LoggerType.*;
+import static academy.mindswap.utils.logger.LoggerType.ERROR;
+import static academy.mindswap.utils.logger.LoggerType.SUCCESS;
 
 public class Game {
     private List<PlayerHandler> playerConnections;
@@ -30,14 +32,21 @@ public class Game {
 
     public Game(Server server) {
         this.server = server;
-        playerConnections = new ArrayList<>();
+
+        playerConnections = new CopyOnWriteArrayList<>();
+
         playerThreads = Executors.newFixedThreadPool(MAX_PLAYERS);
     }
 
     public void start() {
+        broadcast(CREATE_BOARD);
+
         isGameStarted = true;
+
         broadcast(GAME_START_MESSAGE);
+
         isFirstTurn = true;
+
         createWinningConditions();
     }
 
@@ -48,39 +57,53 @@ public class Game {
 
         if (isFirstTurn) {
             playerTurn = chooseStartingPlayer();
+
             isFirstTurn = false;
         } else {
             playerTurn = switchPlayer(playerTurn);
+
+            broadcast(PLAYER_TURN.concat(playerTurn.nickname.toUpperCase()).concat(TURN));
+
             playerTurn.sendMessage(YOUR_TURN);
         }
 
         playerMove = playerTurn.getPlayerMessage();
+
         playerTurn.playerMoves.add(playerMove);
 
         sendGameState(playerMove, gameStateToSend);
-        System.out.println(checkWinner(playerTurn));
+
+        checkWinner(playerTurn);
     }
 
     private void sendGameState(String playerMove, StringBuilder gameStateToSend) {
         updateGameState(playerTurn, playerMove);
+
         gameStateToSend.append(GAME_STATE);
+
         for (char[] row : gameState) {
             for (char c : row) {
                 gameStateToSend.append(c);
             }
-
         }
+
         broadcast(gameStateToSend.toString());
     }
 
     private PlayerHandler switchPlayer(PlayerHandler previousPlayer) {
-
         Optional<PlayerHandler> nextPlayer = playerConnections.stream()
                 .filter(ph -> ph != previousPlayer)
                 .findFirst();
 
-        return nextPlayer.get();
+        if (nextPlayer.isPresent()) {
+            return nextPlayer.get();
+        }
 
+        log(ERROR, PLAYER_LEFT, true);
+
+        finishGame(0);
+
+        return null;
     }
 
     private void updateGameState(PlayerHandler playerTurn, String playerMove) {
@@ -106,28 +129,46 @@ public class Game {
                 .filter(ph -> ph != firstPlayer)
                 .findFirst();
 
-        secondPlayer.get().symbol = O;
+        if (secondPlayer.isPresent()) {
+            secondPlayer.get().symbol = O;
 
-        firstPlayer.sendMessage(YOUR_TURN);
+            broadcast(PLAYER_TURN.concat(firstPlayer.nickname.toUpperCase()).concat(TURN));
 
-        return firstPlayer;
-    }
+            firstPlayer.sendMessage(YOUR_TURN);
 
-    private String checkWinner(PlayerHandler playerTurn) {
-        if (playerConnections.get(0).playerMoves.size() + playerConnections.get(1).playerMoves.size() == 9) {
-            log(WARNING, DRAW, false);
-            return DRAW;
+            return firstPlayer;
         }
 
+        log(ERROR, PLAYER_LEFT, true);
+
+        finishGame(0);
+
+        return null;
+    }
+
+    private void checkWinner(PlayerHandler playerTurn) {
         for (List winningCondition : winningConditions) {
             if (playerTurn.playerMoves.containsAll(winningCondition)) {
                 log(SUCCESS, String.format(WINNER, playerTurn.nickname), false);
-                return String.format(WINNER, playerTurn.nickname);
+
+                StringBuilder winnerPositions = new StringBuilder();
+
+                winningCondition.forEach(winnerPositions::append);
+
+                broadcast(GAME_OVER.concat(String.format(WINNER, playerTurn.nickname)).concat(winnerPositions.toString()));
+
+                finishGame(4000);
             }
         }
-        return "";
-    }
 
+        if (playerConnections.get(0).playerMoves.size() + playerConnections.get(1).playerMoves.size() == 9) {
+            log(SUCCESS, DRAW, false);
+
+            broadcast(GAME_OVER.concat(DRAW));
+
+            finishGame(4000);
+        }
+    }
 
     private void createWinningConditions() {
         List<String> topRow = Arrays.asList("1", "2", "3");
@@ -168,16 +209,6 @@ public class Game {
         playerThreads.submit(new PlayerHandler(playerSocket));
     }
 
-    private synchronized boolean playersHaveNickname() {
-        for (PlayerHandler playerConnection : playerConnections) {
-            if (playerConnection.nickname.equals("")) {
-                return false;
-            }
-        }
-
-        return true;
-    }
-
     private boolean isAcceptingPlayers() {
         return playerConnections.size() < MAX_PLAYERS && !isGameStarted;
     }
@@ -188,8 +219,14 @@ public class Game {
                 .noneMatch(ph -> ph.nickname.equals(""));
     }
 
-    public void finishGame() {
-        broadcast(GAME_OVER);
+    public void finishGame(int delay) {
+        try {
+            Thread.sleep(delay);
+        } catch (InterruptedException e) {
+            log(ERROR, e.getMessage(), true);
+
+            System.exit(0);
+        }
 
         playerConnections.stream()
                 .filter(ph -> !ph.hasDisconnected)
@@ -205,10 +242,6 @@ public class Game {
     public boolean isGameStarted() {
         return isGameStarted;
     }
-
-    /* private void removeFromServerList() {
-    server.removeGameFromList(this);}
-     */
 
     /**
      * @link inner class handling playerSockets
@@ -227,9 +260,12 @@ public class Game {
 
             try {
                 bufferedReader = new BufferedReader(new InputStreamReader(playerSocket.getInputStream()));
+
                 bufferedWriter = new BufferedWriter(new OutputStreamWriter(playerSocket.getOutputStream()));
             } catch (IOException e) {
-                shutdownPlayerSocket();
+                log(ERROR, e.getMessage(), true);
+
+                finishGame(0);
             }
         }
 
@@ -254,22 +290,21 @@ public class Game {
             log(SUCCESS, String.format(WELCOME_MESSAGE, " (" + nickname + ")"), false);
 
             while (!isGameFinished) {
-
                 if (Thread.interrupted()) {
-                    return;
+                    shutdownPlayerSocket();
                 }
             }
-
-            shutdownPlayerSocket();
         }
 
         private void sendMessage(String message) {
             try {
                 bufferedWriter.write(message);
+
                 bufferedWriter.newLine();
+
                 bufferedWriter.flush();
             } catch (IOException e) {
-                throw new RuntimeException(e);
+                log(ERROR, e.getMessage(), true);
             }
         }
 
@@ -279,14 +314,24 @@ public class Game {
             try {
                 playerMessage = bufferedReader.readLine();
             } catch (IOException | NullPointerException e) {
-                shutdownPlayerSocket();
+                log(ERROR, e.getMessage(), true);
             } finally {
                 if (playerMessage == null) {
-                    shutdownPlayerSocket();
+                    finishGame(0);
                 }
             }
 
             return playerMessage;
+        }
+
+        private boolean playersHaveNickname() {
+            for (PlayerHandler playerConnection : playerConnections) {
+                if (playerConnection.nickname.equals("")) {
+                    return false;
+                }
+            }
+
+            return true;
         }
 
         private void shutdownPlayerSocket() {
@@ -295,20 +340,16 @@ public class Game {
             if (!playerSocket.isClosed()) {
                 try {
                     bufferedWriter.close();
+
                     bufferedReader.close();
+
                     playerSocket.close();
+
+                    log(ERROR, PLAYER_LEFT, false);
                 } catch (IOException e) {
                     log(ERROR, PLAYER_SOCKET_CLOSED, true);
-                } finally {
-                    //areStillPlayersPlaying();
-
-                    log(WARNING, PLAYER_LEFT, false);
-
-                    broadcast(PLAYER_LEFT, this);
                 }
             }
-
         }
-
     }
 }

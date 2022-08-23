@@ -8,8 +8,6 @@ public final class GameFactory {
     }
 
     public static Game create(Server server) {
-
         return new Game(server);
-
     }
 }
