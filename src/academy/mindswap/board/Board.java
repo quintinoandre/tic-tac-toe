@@ -6,6 +6,8 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.util.ArrayList;
 
+import static academy.mindswap.game.GameMessages.DRAW;
+
 public class Board implements ActionListener {
     JFrame frame = new JFrame();
     JPanel boardTitle = new JPanel();
@@ -149,12 +151,46 @@ public class Board implements ActionListener {
         return playerMove;
     }
 
+    public void setPlayerTurn(String playerTurn) {
+        textField.setText(playerTurn);
+    }
+
     public void setPlayerMove(String playerMove) {
         this.playerMove = playerMove;
     }
 
     public void setGameState(char[][] gameState) {
         this.gameState = gameState;
+    }
+
+    private void printWinnerPositions(int a, int b, int c) {
+        buttons.get(a).setBackground(Color.GREEN);
+
+        buttons.get(b).setBackground(Color.GREEN);
+        
+        buttons.get(c).setBackground(Color.GREEN);
+    }
+
+    public void setGameResult(String gameResult) {
+        disableButtons();
+
+        if (!gameResult.equals(DRAW)) {
+            String[] winnerPositions = gameResult.replaceAll("\\D", "").split("");
+
+            int[] winnerButtonsPosition = {Integer.parseInt(winnerPositions[0]) - 1,
+                    Integer.parseInt(winnerPositions[1]) - 1,
+                    Integer.parseInt(winnerPositions[2]) - 1};
+
+            printWinnerPositions(winnerButtonsPosition[0], winnerButtonsPosition[1], winnerButtonsPosition[2]);
+
+            textField.setText(gameResult.replaceAll("\\d", ""));
+
+            return;
+        }
+
+        buttons.forEach(button -> button.setBackground(Color.YELLOW));
+
+        textField.setText(gameResult);
     }
 }
 
