@@ -6,49 +6,41 @@ import academy.mindswap.game.GameFactory;
 
 import java.io.IOException;
 import java.net.ServerSocket;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 import static academy.mindswap.ConstantMessages.MAX_PLAYERS;
 import static academy.mindswap.EnvironmentVariables.PORT;
+import static academy.mindswap.server.ServerMessages.SERVER_START;
+import static academy.mindswap.utils.logger.Logger.log;
+import static academy.mindswap.utils.logger.LoggerType.ERROR;
+import static academy.mindswap.utils.logger.LoggerType.SUCCESS;
 
 
 public class Server {
 
     public static void main(String[] args) {
         Server server = new Server();
+
         server.startServer();
     }
 
-    // private List<Game> gamesList; //TODO : add a gameslist
-    Game game;
-    private ServerSocket server; //is the server socket accepting playerSockets
-    private boolean done; //this allows the server to keep on receiving clients until is true
-
-    private ExecutorService gamesThreads; // we need to create a threadpool for different games that are going to connect
+    private Game game;
+    private ServerSocket server;
+    private boolean isServerDown;
     private int playersConnected;
 
-    public Server() {
-        //gamesList = new CopyOnWriteArrayList<>();
-        this.done = false;
-
+    private Server() {
+        this.isServerDown = false;
     }
 
-
     public void startServer() {
+        log(SUCCESS, String.format(SERVER_START, PORT), true);
+
         try {
-            createGame();
+            game = GameFactory.create(this);
+
             server = new ServerSocket(PORT);
-            gamesThreads = Executors.newCachedThreadPool(); //cachedthreadPools create the necessary threads, while using the already existing ones
-            while (!done) { //!done is true, so while true. When we change done to true, !done turn out to be false and stops the while loop
 
-                /*if(!isGameCreated()){
-                    createGame();
-                }
-                if (getOpenGame().isPresent()) {
-                  getOpenGame.acceptPlayer(Socket gameSocket = server.accept());
-                }*/
-
+            while (!isServerDown) {
                 if (!game.canGameStart()) {
                     if (playersConnected < MAX_PLAYERS) {
                         game.acceptPlayer(server.accept());
@@ -71,43 +63,30 @@ public class Server {
                     continue;
                 }
 
-                game.finishGame();
+                shutdown();
             }
-        } catch (IOException e) { //catch the exception here instead of throwing it to the main
+        } catch (IOException e) {
+            log(ERROR, e.getMessage(), true);
+
             shutdown();
         }
     }
-
-
-    // private boolean isGameCreated() {}
-
-
-    /**
-     * @link this method creates a game, adds the server to it and
-     * puts it on a thread with the gameThreads.execute method
-     */
-
-    private void createGame() {
-        game = GameFactory.create(this);
-        //gamesList.add(game);
-        //gamesThreads.execute(game);
-    }
-
 
     /**
      * this method shuts down the server and the individual playerSockets connected to the server
      */
     public void shutdown() {
-        done = true;
+        isServerDown = true;
+
         if (!server.isClosed()) {
             try {
                 server.close();
 
+                System.exit(0);
             } catch (IOException e) {
-                throw new RuntimeException(e);
+                log(ERROR, e.getMessage(), true);
             }
         }
     }
-    //public void removeGameFromList(Game game) {}
 }
 
