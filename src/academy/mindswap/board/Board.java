@@ -25,17 +25,21 @@ public class Board implements ActionListener {
             {' ', ' ', ' '}
     };
 
-    /*public Text xScoreText, oScoreText;
-    public int xScore = 0;
-    public int oScore = 0;
-
-     */
-
     public void createBoard() {
-        //gameIntro();
         boardFrame();
+
+        gameIntro();
+
+        try {
+            Thread.sleep(3000);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
         boardTitle();
+
         buttonsGrid();
+
         disableButtons();
 
         Thread updateGameState = new Thread(() -> {
@@ -74,21 +78,20 @@ public class Board implements ActionListener {
         frame.setVisible(true);
     }
 
-    /*private void gameIntro(){
-        textField.setBackground(Color.BLACK);
-        textField.setForeground(Color.BLACK);
-        textField.setFont(new Font("Monospaced", Font.BOLD, 40));
+    private void gameIntro() {
         textField.setHorizontalAlignment(SwingConstants.CENTER);
-        textField.setText("TIC TAC TOE on steroids");
-        textField.setOpaque(true);
+        textField.setText(
+                "<html><img src=\""
+                        + Board.class.getResource("screensplash.png")
+                        + "\"></html>"
+        );
 
-        try{
-            Thread.sleep(3000);
+        boardTitle.setLayout(new BorderLayout());
+        boardTitle.setBounds(0, 0, BOARD_WIDTH, BOARD_HEIGHT);
+        boardTitle.add(textField);
 
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-    }*/
+        frame.add(boardTitle, BorderLayout.CENTER);
+    }
 
     private void boardTitle() {
         textField.setBackground(Color.BLACK);
@@ -100,30 +103,28 @@ public class Board implements ActionListener {
 
         boardTitle.setLayout(new BorderLayout());
         boardTitle.setBounds(0, 0, TITLE_WIDTH, TITLE_HEIGHT);
-
         boardTitle.add(textField);
+
         frame.add(boardTitle, BorderLayout.NORTH);
     }
 
     private void buttonsGrid() {
         boardButtons.setLayout(new GridLayout(3, 3));
         boardButtons.setBackground(new Color(150, 150, 150));
+
         frame.add(boardButtons);
 
         for (int i = 0; i < 9; i++) {
             buttons.add(new JButton());
+
             boardButtons.add(buttons.get(i));
+
             buttons.get(i).setOpaque(true);
             buttons.get(i).setFont(new Font("Monospaced", Font.BOLD, 50));
             buttons.get(i).setFocusable(false);
             buttons.get(i).addActionListener(this);
         }
     }
-
-    /*public void scoreArea() {
-    }
-
-     */
 
     @Override
     public void actionPerformed(ActionEvent e) {
@@ -146,7 +147,6 @@ public class Board implements ActionListener {
         }
     }
 
-
     public String getPlayerMove() {
         return playerMove;
     }
@@ -165,9 +165,7 @@ public class Board implements ActionListener {
 
     private void printWinnerPositions(int a, int b, int c) {
         buttons.get(a).setBackground(Color.GREEN);
-
         buttons.get(b).setBackground(Color.GREEN);
-        
         buttons.get(c).setBackground(Color.GREEN);
     }
 
