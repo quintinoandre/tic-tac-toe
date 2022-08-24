@@ -1,7 +1,5 @@
 package academy.mindswap.game;
 
-import academy.mindswap.server.Server;
-
 import java.io.*;
 import java.net.Socket;
 import java.util.*;
@@ -15,29 +13,39 @@ import static academy.mindswap.utils.logger.Logger.log;
 import static academy.mindswap.utils.logger.LoggerType.ERROR;
 import static academy.mindswap.utils.logger.LoggerType.SUCCESS;
 
+/**
+ * Class representing the game logic.
+ * It manages the information between players.
+ */
 public class Game {
     private List<PlayerHandler> playerConnections;
-    ExecutorService playerThreads;
-    Server server;
+    private ExecutorService playerThreads;
     private volatile boolean isGameFinished;
     private boolean isGameStarted;
     private boolean isFirstTurn;
-    PlayerHandler playerTurn;
-    List<List> winningConditions = new ArrayList<>();
+    private PlayerHandler playerTurn;
+    private List<List> winningConditions = new ArrayList<>();
 
-    char[][] gameState = {
-            {' ', ' ', ' '},
-            {' ', ' ', ' '},
-            {' ', ' ', ' '}};
+    private String[][] gameState = {
+            {" ", " ", " "},
+            {" ", " ", " "},
+            {" ", " ", " "}};
 
-    public Game(Server server) {
-        this.server = server;
-
+    /**
+     * Game constructor that initializes playerconnections arraylist and fixedthreadpool.
+     */
+    public Game() {
         playerConnections = new CopyOnWriteArrayList<>();
 
         playerThreads = Executors.newFixedThreadPool(MAX_PLAYERS);
     }
 
+    /**
+     * Broadcasts the information for the players to initializes their own boards.
+     * Indicates players that the game begins.
+     * Initializes the variables isGameStarted and isFirstTurn.
+     * Creates the winning conditions (to be checked later on).
+     */
     public void start() {
         broadcast(CREATE_BOARD);
 
@@ -50,6 +58,15 @@ public class Game {
         createWinningConditions();
     }
 
+    /**
+     * Chooses the first playing player.
+     * Starts the mechanism to change player each turn.
+     * Broadcasts the name of the player that will play in each turn.
+     * Indicates the player that it's his/her turn.
+     * Receives and saves each play from player.
+     * Updates internal game state and sends it to the players via broadcast.
+     * Checks if there is any winner.
+     */
     public void nextTurn() {
         String playerMove;
 
@@ -76,20 +93,32 @@ public class Game {
         checkWinner(playerTurn);
     }
 
+    /**
+     * Sends the game state to the players after updating the internal one.
+     *
+     * @param playerMove      String containing the player move.
+     * @param gameStateToSend String containing the updated game state to send.
+     */
     private void sendGameState(String playerMove, StringBuilder gameStateToSend) {
         updateGameState(playerTurn, playerMove);
 
         gameStateToSend.append(GAME_STATE);
 
-        for (char[] row : gameState) {
-            for (char c : row) {
-                gameStateToSend.append(c);
+        for (String[] row : gameState) {
+            for (String s : row) {
+                gameStateToSend.append(s);
             }
         }
 
         broadcast(gameStateToSend.toString());
     }
 
+    /**
+     * Decides the next player by knowing the previous one.
+     *
+     * @param previousPlayer
+     * @return
+     */
     private PlayerHandler switchPlayer(PlayerHandler previousPlayer) {
         Optional<PlayerHandler> nextPlayer = playerConnections.stream()
                 .filter(ph -> ph != previousPlayer)
@@ -106,6 +135,12 @@ public class Game {
         return null;
     }
 
+    /**
+     * Updates the internal game state, to send to the players.
+     *
+     * @param playerTurn Player that played.
+     * @param playerMove The move that was played.
+     */
     private void updateGameState(PlayerHandler playerTurn, String playerMove) {
         switch (playerMove) {
             case "1" -> gameState[0][0] = playerTurn.symbol;
@@ -120,6 +155,15 @@ public class Game {
         }
     }
 
+    /**
+     * Chooses the starting player randomly.
+     * It assigns the first player to the starting symbol and second player to the other one.
+     * Broadcasts the name of the player that will start.
+     * Indicates the first player that it's his/her turn.
+     * Terminates the game if the second player disconnects.
+     *
+     * @return first player.
+     */
     private PlayerHandler chooseStartingPlayer() {
         PlayerHandler firstPlayer = playerConnections.get(new Random().nextInt(2));
 
@@ -146,6 +190,12 @@ public class Game {
         return null;
     }
 
+    /**
+     * Checks if the player has a winning condition in his playerMoves.
+     * If all positions of the board are filled, it broadcasts a message indicating a DRAW.
+     *
+     * @param playerTurn Player that played.
+     */
     private void checkWinner(PlayerHandler playerTurn) {
         for (List winningCondition : winningConditions) {
             if (playerTurn.playerMoves.containsAll(winningCondition)) {
@@ -170,6 +220,9 @@ public class Game {
         }
     }
 
+    /**
+     * Creates winning conditions and saves them in the winningConditions arrayList.
+     */
     private void createWinningConditions() {
         List<String> topRow = Arrays.asList("1", "2", "3");
         List<String> midRow = Arrays.asList("4", "5", "6");
@@ -192,12 +245,23 @@ public class Game {
         winningConditions.add(diagonal2);
     }
 
+    /**
+     * Broadcasts the message to all players.
+     *
+     * @param message String to send.
+     */
     private synchronized void broadcast(String message) {
         playerConnections.stream()
                 .filter(ph -> !ph.hasDisconnected)
                 .forEach(ph -> ph.sendMessage(message));
     }
 
+    /**
+     * Broadcasts the message to all players, except a selected one.
+     *
+     * @param message    String to send.
+     * @param notSending Player that does not receive the message.
+     */
     private synchronized void broadcast(String message, PlayerHandler notSending) {
         playerConnections.stream()
                 .filter(ph -> !ph.hasDisconnected)
@@ -205,20 +269,40 @@ public class Game {
                 .forEach(ph -> ph.sendMessage(message));
     }
 
+    /**
+     * Adds to the threadpool a new player handler.
+     *
+     * @param playerSocket connection between server and player.
+     */
     public void acceptPlayer(Socket playerSocket) {
         playerThreads.submit(new PlayerHandler(playerSocket));
     }
 
+    /**
+     * Checks if the game can accept more players and
+     *
+     * @return true or false.
+     */
     private boolean isAcceptingPlayers() {
         return playerConnections.size() < MAX_PLAYERS && !isGameStarted;
     }
 
+    /**
+     * Check if all necessary players are connected and verifies if each player has nicknames.
+     *
+     * @return true or false.
+     */
     public boolean canGameStart() {
         return !isAcceptingPlayers()
                 && playerConnections.stream().filter(ph -> !ph.hasDisconnected)
                 .noneMatch(ph -> ph.nickname.equals(""));
     }
 
+    /**
+     * Close all player connections and finishes the game.
+     *
+     * @param delay
+     */
     public void finishGame(int delay) {
         try {
             Thread.sleep(delay);
@@ -235,16 +319,26 @@ public class Game {
         isGameFinished = true;
     }
 
+    /**
+     * Gives the information if the game is finished.
+     *
+     * @return true or false.
+     */
     public boolean isGameFinished() {
         return isGameFinished;
     }
 
+    /**
+     * Gives the information if the game is finished.
+     *
+     * @return true or false.
+     */
     public boolean isGameStarted() {
         return isGameStarted;
     }
 
     /**
-     * @link inner class handling playerSockets
+     * @link Inner class handling playerSockets
      */
     private class PlayerHandler implements Runnable {
         private Socket playerSocket;
@@ -252,9 +346,14 @@ public class Game {
         private BufferedWriter bufferedWriter;
         private String nickname = "";
         private boolean hasDisconnected;
-        private char symbol;
+        private String symbol;
         private List<String> playerMoves = new ArrayList<>();
 
+        /**
+         * Constructor method that accepts the playerSocket, initializes bufferedReader and bufferedWriter.
+         *
+         * @param playerSocket
+         */
         private PlayerHandler(Socket playerSocket) {
             this.playerSocket = playerSocket;
 
@@ -269,6 +368,13 @@ public class Game {
             }
         }
 
+        /**
+         * PlayerHandler adds himself to the PlayerHandler list.
+         * Asks the player for a nickname.
+         * Sends to the player a welcome message after receiving a correct nickname
+         * Informs the other player of his arrival.
+         * The while loop ensures that the thread remains alive.
+         */
         @Override
         public void run() {
             playerConnections.add(this);
@@ -279,6 +385,8 @@ public class Game {
 
             this.sendMessage(String.format(WELCOME_MESSAGE, nickname));
 
+            log(SUCCESS, String.format(WELCOME_MESSAGE, " (" + nickname + ")"), false);
+
             while (true) {
                 if (playersHaveNickname()) {
                     broadcast(String.format(NEW_PLAYER, nickname), this);
@@ -287,8 +395,6 @@ public class Game {
                 }
             }
 
-            log(SUCCESS, String.format(WELCOME_MESSAGE, " (" + nickname + ")"), false);
-
             while (!isGameFinished) {
                 if (Thread.interrupted()) {
                     shutdownPlayerSocket();
@@ -296,6 +402,11 @@ public class Game {
             }
         }
 
+        /**
+         * Send message to the player.
+         *
+         * @param message
+         */
         private void sendMessage(String message) {
             try {
                 bufferedWriter.write(message);
@@ -308,6 +419,11 @@ public class Game {
             }
         }
 
+        /**
+         * Receives message from the player.
+         *
+         * @return
+         */
         private String getPlayerMessage() {
             String playerMessage = null;
 
@@ -324,6 +440,11 @@ public class Game {
             return playerMessage;
         }
 
+        /**
+         * Check if all players have nicknames.
+         *
+         * @return
+         */
         private boolean playersHaveNickname() {
             for (PlayerHandler playerConnection : playerConnections) {
                 if (playerConnection.nickname.equals("")) {
@@ -334,6 +455,9 @@ public class Game {
             return true;
         }
 
+        /**
+         * Closes bufferedWriter/reader stream and player socket.
+         */
         private void shutdownPlayerSocket() {
             hasDisconnected = true;
 

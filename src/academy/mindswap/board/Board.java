@@ -6,8 +6,14 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.util.ArrayList;
 
+import static academy.mindswap.ConstantMessages.GAME_TITLE;
 import static academy.mindswap.game.GameMessages.DRAW;
+import static academy.mindswap.utils.logger.Logger.log;
+import static academy.mindswap.utils.logger.LoggerType.ERROR;
 
+/**
+ * Class representing the board and implements the ActionListener interface.
+ */
 public class Board implements ActionListener {
     JFrame frame = new JFrame();
     JPanel boardTitle = new JPanel();
@@ -19,12 +25,18 @@ public class Board implements ActionListener {
     private final int TITLE_HEIGHT = 200;
     private final int TITLE_WIDTH = 800;
     private String playerMove = "";
-    private char[][] gameState = {
-            {' ', ' ', ' '},
-            {' ', ' ', ' '},
-            {' ', ' ', ' '}
-    };
+    private String[][] gameState = {
+            {" ", " ", " "},
+            {" ", " ", " "},
+            {" ", " ", " "}};
 
+    /**
+     * Call all methods to initialize the game board.
+     * Starts with the board frame.
+     * Opens a screen splash before the board display.
+     * Both boards start with disabled buttons (until a player is chosen).
+     * Instantiates a new thread that stays constantly updating the game state and disables all clicked buttons.
+     */
     public void createBoard() {
         boardFrame();
 
@@ -33,7 +45,7 @@ public class Board implements ActionListener {
         try {
             Thread.sleep(3000);
         } catch (InterruptedException e) {
-            e.printStackTrace();
+            log(ERROR, e.getMessage(), false);
         }
 
         boardTitle();
@@ -44,24 +56,27 @@ public class Board implements ActionListener {
 
         Thread updateGameState = new Thread(() -> {
             while (true) {
-                buttons.get(0).setText(Character.toString(gameState[0][0]));
-                buttons.get(1).setText(Character.toString(gameState[0][1]));
-                buttons.get(2).setText(Character.toString(gameState[0][2]));
-                buttons.get(3).setText(Character.toString(gameState[1][0]));
-                buttons.get(4).setText(Character.toString(gameState[1][1]));
-                buttons.get(5).setText(Character.toString(gameState[1][2]));
-                buttons.get(6).setText(Character.toString(gameState[2][0]));
-                buttons.get(7).setText(Character.toString(gameState[2][1]));
-                buttons.get(8).setText(Character.toString(gameState[2][2]));
+                buttons.get(0).setText(gameState[0][0]);
+                buttons.get(1).setText(gameState[0][1]);
+                buttons.get(2).setText(gameState[0][2]);
+                buttons.get(3).setText(gameState[1][0]);
+                buttons.get(4).setText(gameState[1][1]);
+                buttons.get(5).setText(gameState[1][2]);
+                buttons.get(6).setText(gameState[2][0]);
+                buttons.get(7).setText(gameState[2][1]);
+                buttons.get(8).setText(gameState[2][2]);
 
-                disableClickedButton();
+                disableClickedButtons();
             }
         });
 
         updateGameState.start();
     }
 
-    private void disableClickedButton() {
+    /**
+     * Disables all the clicked buttons.
+     */
+    private void disableClickedButtons() {
         for (JButton button : buttons) {
             if (!button.getText().equals(" ")) {
                 button.setEnabled(false);
@@ -70,6 +85,10 @@ public class Board implements ActionListener {
         }
     }
 
+    /**
+     * Exit on close option.
+     * Sets the size of the board and its features.
+     */
     private void boardFrame() {
         frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
         frame.setSize(BOARD_WIDTH, BOARD_HEIGHT);
@@ -78,6 +97,9 @@ public class Board implements ActionListener {
         frame.setVisible(true);
     }
 
+    /**
+     * Creates screen splash and its features.
+     */
     private void gameIntro() {
         textField.setHorizontalAlignment(SwingConstants.CENTER);
         textField.setText(
@@ -93,12 +115,15 @@ public class Board implements ActionListener {
         frame.add(boardTitle, BorderLayout.CENTER);
     }
 
+    /**
+     * Creates board title bar and his styles.
+     */
     private void boardTitle() {
         textField.setBackground(Color.BLACK);
         textField.setForeground(new Color(219, 219, 219));
         textField.setFont(new Font("Monospaced", Font.BOLD, 40));
         textField.setHorizontalAlignment(SwingConstants.CENTER);
-        textField.setText("TIC TAC TOE CHALLENGE");
+        textField.setText(GAME_TITLE);
         textField.setOpaque(true);
 
         boardTitle.setLayout(new BorderLayout());
@@ -108,6 +133,11 @@ public class Board implements ActionListener {
         frame.add(boardTitle, BorderLayout.NORTH);
     }
 
+    /**
+     * Creates a 3x3 grid.
+     * Adds the grid to the frame.
+     * Fills the grid with the buttons.
+     */
     private void buttonsGrid() {
         boardButtons.setLayout(new GridLayout(3, 3));
         boardButtons.setBackground(new Color(150, 150, 150));
@@ -126,6 +156,12 @@ public class Board implements ActionListener {
         }
     }
 
+    /**
+     * Verifies which button was clicked, gets its index plus one
+     * and saves that value as a string in the playerMove variable.
+     *
+     * @param e the event to be processed
+     */
     @Override
     public void actionPerformed(ActionEvent e) {
         Object clickedButton = e.getSource();
@@ -133,6 +169,9 @@ public class Board implements ActionListener {
         playerMove = Integer.toString(buttons.indexOf(clickedButton) + 1);
     }
 
+    /**
+     * Enables all buttons that weren't clicked.
+     */
     public void enableButtons() {
         for (JButton button : buttons) {
             if (button.getText().equals(" ")) {
@@ -141,10 +180,26 @@ public class Board implements ActionListener {
         }
     }
 
+    /**
+     * Disables all buttons.
+     */
     public void disableButtons() {
         for (JButton button : buttons) {
             button.setEnabled(false);
         }
+    }
+
+    /**
+     * When the winning conditions are fulfilled the winner positions turn green.
+     *
+     * @param a first winner position.
+     * @param b second winner position.
+     * @param c third winner position.
+     */
+    private void printWinnerPositions(int a, int b, int c) {
+        buttons.get(a).setBackground(Color.GREEN);
+        buttons.get(b).setBackground(Color.GREEN);
+        buttons.get(c).setBackground(Color.GREEN);
     }
 
     public String getPlayerMove() {
@@ -159,16 +214,19 @@ public class Board implements ActionListener {
         this.playerMove = playerMove;
     }
 
-    public void setGameState(char[][] gameState) {
+    public void setGameState(String[][] gameState) {
         this.gameState = gameState;
     }
 
-    private void printWinnerPositions(int a, int b, int c) {
-        buttons.get(a).setBackground(Color.GREEN);
-        buttons.get(b).setBackground(Color.GREEN);
-        buttons.get(c).setBackground(Color.GREEN);
-    }
-
+    /**
+     * When the game ends, disable all buttons.
+     * If it's not a draw, extracts the winner positions from a message sent by the game.
+     * Afterwards, calls the printWinnerPositions method to assign its winning colors.
+     * It prints the winner name in the title bar.
+     * In case of a draw, turns all buttons yellow and, also, prints DRAW to the title bar.
+     *
+     * @param gameResult
+     */
     public void setGameResult(String gameResult) {
         disableButtons();
 
