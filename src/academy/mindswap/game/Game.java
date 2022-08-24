@@ -67,7 +67,7 @@ public class Game {
      * Updates internal game state and sends it to the players via broadcast.
      * Checks if there is any winner.
      */
-    public void nextTurn() {
+    public void nextTurn() throws IOException {
         String playerMove;
 
         StringBuilder gameStateToSend = new StringBuilder();
@@ -84,13 +84,15 @@ public class Game {
             playerTurn.sendMessage(YOUR_TURN);
         }
 
-        playerMove = playerTurn.getPlayerMessage();
+        if (playerTurn.playerSocket.getInputStream().read() != -1) {
+            playerMove = playerTurn.getPlayerMessage();
 
-        playerTurn.playerMoves.add(playerMove);
+            playerTurn.playerMoves.add(playerMove);
 
-        sendGameState(playerMove, gameStateToSend);
+            sendGameState(playerMove, gameStateToSend);
 
-        checkWinner(playerTurn);
+            checkWinner(playerTurn);
+        }
     }
 
     /**
@@ -396,6 +398,20 @@ public class Game {
             }
 
             while (!isGameFinished) {
+                try {
+                    if (this.playerSocket.getInputStream().read() == -1) {
+                        this.hasDisconnected = true;
+
+                        log(ERROR, PLAYER_LEFT, false);
+
+                        broadcast(PLAYER_LEFT, this);
+
+                        finishGame(0);
+                    }
+                } catch (IOException e) {
+                    log(ERROR, e.getMessage(), true);
+                }
+
                 if (Thread.interrupted()) {
                     shutdownPlayerSocket();
                 }
