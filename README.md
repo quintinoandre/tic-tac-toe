@@ -54,6 +54,6 @@ Instructions to run:
 ## Game Board
 
 <div align="center">
-<img width="450" src="https://user-images.githubusercontent.com/83362057/193158041-bbf0d8d9-eb6a-41fb-9405-86557cbbe0bc.png">
-<img width="450" src="https://user-images.githubusercontent.com/83362057/193158114-00c2c3b4-78b3-4d58-87f1-a9f5c05f2d5c.png">
+<img width="400" src="https://user-images.githubusercontent.com/83362057/193158041-bbf0d8d9-eb6a-41fb-9405-86557cbbe0bc.png">
+<img width="400" src="https://user-images.githubusercontent.com/83362057/193158114-00c2c3b4-78b3-4d58-87f1-a9f5c05f2d5c.png">
 </div>
